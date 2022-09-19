@@ -16,16 +16,22 @@
 package ml.dmlc.xgboost4j.scala.example.flink
 
 import ml.dmlc.xgboost4j.scala.flink.XGBoost
-import org.apache.flink.api.scala.{ExecutionEnvironment, _}
-import org.apache.flink.ml.MLUtils
+import org.apache.flink.api.java.{ExecutionEnvironment, _}
+import org.apache.flink.util.Collector
 
 object DistTrainWithFlink {
+
+  def readLibSVM(env: ExecutionEnvironment, path: String): DataSet[(Float, Vector[Float])] = {
+    env.readTextFile(path).flatMap((_: String, _: Collector[(Float, Vector[Float])]) => {})
+  }
+
   def main(args: Array[String]) {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    // read trainining data
-    val trainData =
-      MLUtils.readLibSVM(env, "/path/to/data/agaricus.txt.train")
-    val testData = MLUtils.readLibSVM(env, "/path/to/data/agaricus.txt.test")
+    // read training data
+    val trainData: DataSet[(Float, Vector[Float])] =
+      readLibSVM(env, "/path/to/data/agaricus.txt.train")
+    val testData: DataSet[(Float, Vector[Float])] =
+      readLibSVM(env, "/path/to/data/agaricus.txt.test")
     // define parameters
     val paramMap = List(
       "eta" -> 0.1,
@@ -35,7 +41,7 @@ object DistTrainWithFlink {
     val round = 2
     // train the model
     val model = XGBoost.train(trainData, paramMap, round)
-    val predTest = model.predict(testData.map{x => x.vector})
+    val predTest = model.predict(testData.map{x => x._2})
     model.saveModelAsHadoopFile("file:///path/to/xgboost.model")
   }
 }

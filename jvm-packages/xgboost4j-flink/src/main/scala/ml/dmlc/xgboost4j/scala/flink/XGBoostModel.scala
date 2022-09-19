@@ -18,11 +18,14 @@ package ml.dmlc.xgboost4j.scala.flink
 
 import ml.dmlc.xgboost4j.LabeledPoint
 import ml.dmlc.xgboost4j.scala.{Booster, DMatrix}
-
-import org.apache.flink.api.scala.{DataSet, _}
-import org.apache.flink.ml.math.Vector
+import org.apache.flink.api.common.functions.MapPartitionFunction
+import org.apache.flink.api.java.DataSet
+import org.apache.flink.util.Collector
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
+
+import java.lang
+import scala.jdk.CollectionConverters.IterableHasAsScala
 
 class XGBoostModel (booster: Booster) extends Serializable {
   /**
@@ -42,7 +45,7 @@ class XGBoostModel (booster: Booster) extends Serializable {
    * @return prediction result
    */
   def predict(testSet: DMatrix): Array[Array[Float]] = {
-    booster.predict(testSet, true, 0)
+    booster.predict(testSet, outPutMargin = true, 0)
   }
 
   /**
@@ -51,17 +54,17 @@ class XGBoostModel (booster: Booster) extends Serializable {
     * @param data The dataset to be predicted.
     * @return The prediction result.
     */
-  def predict(data: DataSet[Vector]) : DataSet[Array[Float]] = {
-    val predictMap: Iterator[Vector] => Traversable[Array[Float]] =
-      (it: Iterator[Vector]) => {
-        val mapper = (x: Vector) => {
-          val (index, value) = x.toSeq.unzip
-          LabeledPoint(0.0f, x.size, index.toArray, value.map(_.toFloat).toArray)
-        }
-        val dataIter = for (x <- it) yield mapper(x)
+  def predict(data: DataSet[Vector[Float]]) : DataSet[Array[Float]] = {
+    val mapper = (x: Vector[Float]) => LabeledPoint(0.0f, x.size, x.indices.toArray, x.toArray)
+    val predictMap: MapPartitionFunction[Vector[Float], Array[Float]] =
+      (values: lang.Iterable[Vector[Float]], out: Collector[Array[Float]]) => {
+        val dataIter = values.asScala.map(mapper).iterator
         val dmat = new DMatrix(dataIter, null)
-        this.booster.predict(dmat)
-      }
+        booster
+          .predict(dmat)
+          .foreach(out.collect)
+    }
+
     data.mapPartition(predictMap)
   }
 }

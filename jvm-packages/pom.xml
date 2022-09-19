@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>ml.dmlc</groupId>
-    <artifactId>xgboost-jvm_2.12</artifactId>
+    <artifactId>xgboost-jvm_2.13</artifactId>
     <version>2.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>XGBoost JVM Package</name>
@@ -33,17 +33,21 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
-        <flink.version>1.7.2</flink.version>
-        <spark.version>3.0.1</spark.version>
-        <scala.version>2.12.8</scala.version>
-        <scala.binary.version>2.12</scala.binary.version>
-        <hadoop.version>2.7.3</hadoop.version>
+        <flink.version>1.15.1</flink.version>
+        <spark.version>3.2.1</spark.version>
+        <scala.patch.version>8</scala.patch.version>
+        <akka.version>2.6.20</akka.version>
+        <scala.binary.version>2.13</scala.binary.version>
+        <commons-lang.version>3.4</commons-lang.version>
+        <hadoop.version>2.10.1</hadoop.version>
         <maven.wagon.http.retryHandler.count>5</maven.wagon.http.retryHandler.count>
         <log.capi.invocation>OFF</log.capi.invocation>
         <use.cuda>OFF</use.cuda>
         <cudf.version>21.08.2</cudf.version>
         <spark.rapids.version>21.08.0</spark.rapids.version>
         <cudf.classifier>cuda11</cudf.classifier>
+        <junit.version>4.13.2</junit.version>
+        <scalatest.version>3.2.13</scalatest.version>
     </properties>
     <repositories>
         <repository>
@@ -100,7 +104,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-jar-plugin</artifactId>
-                        <version>3.0.2</version>
+                        <version>3.2.2</version>
                         <executions>
                             <execution>
                                 <id>empty-javadoc-jar</id>
@@ -129,7 +133,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
-                        <version>1.5</version>
+                        <version>3.0.1</version>
                         <executions>
                             <execution>
                                 <id>sign-artifacts</id>
@@ -329,7 +333,13 @@
             <plugin>
               <groupId>org.scalatest</groupId>
               <artifactId>scalatest-maven-plugin</artifactId>
-              <version>1.0</version>
+              <version>2.1.0</version>
+              <configuration>
+                <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
+                <junitxml>.</junitxml>
+                <reporters>org.scalatest.tools.HtmlReporter -F,org.scalatest.tools.JUnitXmlReporter -F</reporters>
+                <filereports>test-result.txt</filereports>
+              </configuration>
               <executions>
                 <execution>
                   <id>test</id>
@@ -392,7 +402,7 @@
             <plugin>
                 <groupId>net.alchim31.maven</groupId>
                 <artifactId>scala-maven-plugin</artifactId>
-                <version>3.2.2</version>
+                <version>3.3.2</version>
                 <executions>
                     <execution>
                         <id>compile</id>
@@ -427,7 +437,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.19.1</version>
+                <version>2.22.2</version>
                 <configuration>
                     <skipTests>false</skipTests>
                     <useSystemClassLoader>false</useSystemClassLoader>
@@ -449,13 +459,14 @@
     <reporting>
         <plugins>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-project-info-reports-plugin</artifactId>
-                <version>2.2</version>
+                <version>3.2.2</version>
             </plugin>
             <plugin>
                 <groupId>net.alchim31.maven</groupId>
                 <artifactId>scala-maven-plugin</artifactId>
-                <version>3.2.1</version>
+                <version>3.3.2</version>
                 <configuration>
                     <jvmArgs>
                         <jvmArg>-Xms64m</jvmArg>
@@ -466,6 +477,11 @@
         </plugins>
     </reporting>
     <dependencies>
+      <dependency>
+        <groupId>org.scala-lang.modules</groupId>
+        <artifactId>scala-collection-compat_${scala.binary.version}</artifactId>
+        <version>2.2.0</version>
+      </dependency>
         <dependency>
             <groupId>com.esotericsoftware</groupId>
             <artifactId>kryo</artifactId>
@@ -474,18 +490,18 @@
         <dependency>
             <groupId>org.scala-lang</groupId>
             <artifactId>scala-compiler</artifactId>
-            <version>${scala.version}</version>
+            <version>${scala.binary.version}.${scala.patch.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.scala-lang</groupId>
             <artifactId>scala-reflect</artifactId>
-            <version>${scala.version}</version>
+            <version>${scala.binary.version}.${scala.patch.version}</version>
         </dependency>
         <dependency>
             <groupId>org.scala-lang</groupId>
             <artifactId>scala-library</artifactId>
-            <version>${scala.version}</version>
+            <version>${scala.binary.version}.${scala.patch.version}</version>
         </dependency>
         <dependency>
             <groupId>commons-logging</groupId>
@@ -495,13 +511,13 @@
         <dependency>
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest_${scala.binary.version}</artifactId>
-            <version>3.0.8</version>
+            <version>${scalatest.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.scalactic</groupId>
             <artifactId>scalactic_${scala.binary.version}</artifactId>
-            <version>3.0.8</version>
+            <version>${scalatest.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

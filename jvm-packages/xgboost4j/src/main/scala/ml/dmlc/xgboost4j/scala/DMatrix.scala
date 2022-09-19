@@ -16,12 +16,14 @@
 
 package ml.dmlc.xgboost4j.scala
 
-import _root_.scala.collection.JavaConverters._
-
 import ml.dmlc.xgboost4j.LabeledPoint
-import ml.dmlc.xgboost4j.java.{Column, ColumnBatch, DataBatch, XGBoostError, DMatrix => JDMatrix}
+import ml.dmlc.xgboost4j.java.{Column, ColumnBatch, XGBoostError, DMatrix => JDMatrix}
+
+import java.util
+import scala.jdk.CollectionConverters.IteratorHasAsJava
 
 class DMatrix private[scala](private[scala] val jDMatrix: JDMatrix) {
+
   /**
    * init DMatrix from file (svmlight format)
    *

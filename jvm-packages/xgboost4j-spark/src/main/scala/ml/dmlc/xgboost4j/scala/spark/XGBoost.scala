@@ -17,11 +17,8 @@
 package ml.dmlc.xgboost4j.scala.spark
 
 import java.io.File
-
 import scala.collection.mutable
 import scala.util.Random
-import scala.collection.JavaConverters._
-
 import ml.dmlc.xgboost4j.java.{IRabitTracker, Rabit, XGBoostError, RabitTracker => PyRabitTracker}
 import ml.dmlc.xgboost4j.scala.rabit.RabitTracker
 import ml.dmlc.xgboost4j.scala.spark.params.LearningTaskParams
@@ -31,10 +28,11 @@ import ml.dmlc.xgboost4j.{LabeledPoint => XGBLabeledPoint}
 import org.apache.commons.io.FileUtils
 import org.apache.commons.logging.LogFactory
 import org.apache.hadoop.fs.FileSystem
-
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkContext, TaskContext}
 import org.apache.spark.sql.SparkSession
+
+import scala.jdk.CollectionConverters.MapHasAsJava
 
 /**
  * Rabit tracker configurations.
@@ -377,7 +375,7 @@ object XGBoost extends Serializable {
 
     val xgbParamsFactory = new XGBoostExecutionParamsFactory(params, sc)
     val xgbExecParams = xgbParamsFactory.buildXGBRuntimeParams
-    val xgbRabitParams = xgbParamsFactory.buildRabitParams.asJava
+    val xgbRabitParams = xgbParamsFactory.buildRabitParams
 
     val prevBooster = xgbExecParams.checkpointParam.map { checkpointParam =>
       val checkpointManager = new ExternalCheckpointManager(
@@ -394,7 +392,7 @@ object XGBoost extends Serializable {
       // Train for every ${savingRound} rounds and save the partially completed booster
       val tracker = startTracker(xgbExecParams.numWorkers, xgbExecParams.trackerConf)
       val (booster, metrics) = try {
-        tracker.getWorkerEnvs().putAll(xgbRabitParams)
+        tracker.getWorkerEnvs().putAll(xgbRabitParams.asJava)
         val rabitEnv = tracker.getWorkerEnvs
 
         val boostersAndMetrics = trainingRDD.barrier().mapPartitions { iter => {
@@ -450,7 +448,7 @@ class Watches private[scala] (
     val cacheDirName: Option[String]) {
 
   def toMap: Map[String, DMatrix] = {
-    names.zip(datasets).toMap.filter { case (_, matrix) => matrix.rowNum > 0 }
+    names.zip(datasets.toSeq).toMap.filter { case (_, matrix) => matrix.rowNum > 0 }
   }
 
   def size: Int = toMap.size
@@ -569,7 +567,8 @@ private object Watches {
           groupsInfo += groupSize
           true
         })
-        val dMatrix = new DMatrix(iter.flatMap(_.iterator), cachedDirName.map(_ + s"/$name").orNull)
+        val dMatrix = new DMatrix(iter.flatMap(_.iterator),
+          cachedDirName.map(_ + s"/$name").orNull)
         val baseMargin = fromBaseMarginsToArray(baseMargins.result().iterator)
         if (baseMargin.isDefined) {
           dMatrix.setBaseMargin(baseMargin.get)

@@ -47,7 +47,7 @@ private[scala] class RabitTrackerHandler(numWorkers: Int)
   private[this] val tcpManager = IO(Tcp)
 
   // resolves worker connection dependency.
-  val resolver = context.actorOf(Props(classOf[WorkerDependencyResolver], self), "Resolver")
+  private val resolver = context.actorOf(Props(classOf[WorkerDependencyResolver], self), "Resolver")
 
   // workers that have sent "shutdown" signal
   private[this] val shutdownWorkers = mutable.Set.empty[Int]
@@ -275,8 +275,8 @@ private[rabit] class WorkerDependencyResolver(handler: ActorRef) extends Actor w
   private val pendingFulfillment = mutable.Map.empty[Int, Fulfillment]
 
   def awaitingWorkers(linkSet: Set[Int]): AwaitingConnections = {
-    val connSet = awaitConnWorkers.toMap
-      .filterKeys(k => linkSet.contains(k))
+    val connSet = awaitConnWorkers.view
+      .filterKeys(k => linkSet.contains(k)).iterator.toMap
     AwaitingConnections(connSet, linkSet.size - connSet.size)
   }
 

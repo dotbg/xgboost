@@ -17,7 +17,6 @@
 package ml.dmlc.xgboost4j.scala.rabit
 
 import java.net.{InetAddress, InetSocketAddress}
-
 import akka.actor.ActorSystem
 import akka.pattern.ask
 import ml.dmlc.xgboost4j.java.{IRabitTracker, TrackerProperties}
@@ -64,12 +63,13 @@ private[scala] class RabitTracker(numWorkers: Int, port: Option[Int] = None,
                                   maxPortTrials: Int = 1000)
   extends IRabitTracker {
 
-  import scala.collection.JavaConverters._
+  import scala.jdk.CollectionConverters.MapHasAsJava
+  import scala.language.postfixOps
 
   require(numWorkers >=1, "numWorkers must be greater than or equal to one (1).")
 
-  val system = ActorSystem.create("RabitTracker")
-  val handler = system.actorOf(RabitTrackerHandler.props(numWorkers), "Handler")
+  private val system = ActorSystem.create("RabitTracker")
+  private val handler = system.actorOf(RabitTrackerHandler.props(numWorkers), "Handler")
   implicit val askTimeout: akka.util.Timeout = akka.util.Timeout(30 seconds)
   private[this] val tcpBindingTimeout: Duration = 1 minute
 

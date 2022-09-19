@@ -17,7 +17,7 @@
 package ml.dmlc.xgboost4j.scala
 
 import ml.dmlc.xgboost4j.java
-import ml.dmlc.xgboost4j.java.IEvaluation
+import ml.dmlc.xgboost4j.java.{IEvaluation, DMatrix => JDMatrix}
 
 trait EvalTrait extends IEvaluation {
 
@@ -37,7 +37,7 @@ trait EvalTrait extends IEvaluation {
    */
   def eval(predicts: Array[Array[Float]], dmat: DMatrix): Float
 
-  private[scala] def eval(predicts: Array[Array[Float]], jdmat: java.DMatrix): Float = {
+  def eval(predicts: Array[Array[Float]], jdmat: JDMatrix): Float = {
     require(predicts.length == jdmat.getLabel.length, "predicts size and label size must match " +
       s" predicts size: ${predicts.length}, label size: ${jdmat.getLabel.length}")
     eval(predicts, new DMatrix(jdmat))

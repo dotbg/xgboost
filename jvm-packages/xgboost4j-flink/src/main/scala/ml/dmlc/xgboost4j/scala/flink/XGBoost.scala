@@ -16,19 +16,17 @@
 
 package ml.dmlc.xgboost4j.scala.flink
 
-import scala.collection.JavaConverters.asScalaIteratorConverter
-
 import ml.dmlc.xgboost4j.LabeledPoint
 import ml.dmlc.xgboost4j.java.{Rabit, RabitTracker}
 import ml.dmlc.xgboost4j.scala.{DMatrix, XGBoost => XGBoostScala}
-
 import org.apache.commons.logging.LogFactory
 import org.apache.flink.api.common.functions.RichMapPartitionFunction
-import org.apache.flink.api.scala.{DataSet, _}
-import org.apache.flink.ml.common.LabeledVector
+import org.apache.flink.api.java.DataSet
 import org.apache.flink.util.Collector
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
+
+import scala.jdk.CollectionConverters._
 
 object XGBoost {
   /**
@@ -39,17 +37,17 @@ object XGBoost {
   private class MapFunction(paramMap: Map[String, Any],
                             round: Int,
                             workerEnvs: java.util.Map[String, String])
-    extends RichMapPartitionFunction[LabeledVector, XGBoostModel] {
+    extends RichMapPartitionFunction[(Float, Vector[Float]), XGBoostModel] {
     val logger = LogFactory.getLog(this.getClass)
 
-    def mapPartition(it: java.lang.Iterable[LabeledVector],
+    def mapPartition(it: java.lang.Iterable[(Float, Vector[Float])],
                      collector: Collector[XGBoostModel]): Unit = {
       workerEnvs.put("DMLC_TASK_ID", String.valueOf(this.getRuntimeContext.getIndexOfThisSubtask))
       logger.info("start with env" + workerEnvs.toString)
       Rabit.init(workerEnvs)
-      val mapper = (x: LabeledVector) => {
-        val (index, value) = x.vector.toSeq.unzip
-        LabeledPoint(x.label.toFloat, x.vector.size, index.toArray, value.map(_.toFloat).toArray)
+      val mapper = (x: (Float, Vector[Float])) => {
+        val vector = x._2.map(_.toFloat)
+        LabeledPoint(x._1.toFloat, vector.size, vector.indices.toArray, vector.toArray)
       }
       val dataIter = for (x <- it.iterator().asScala) yield mapper(x)
       val trainMat = new DMatrix(dataIter, null)
@@ -63,8 +61,6 @@ object XGBoost {
       collector.collect(new XGBoostModel(booster))
     }
   }
-
-  val logger = LogFactory.getLog(this.getClass)
 
   /**
     * Load XGBoost model from path, using Hadoop Filesystem API.
@@ -84,13 +80,13 @@ object XGBoost {
     * @param params The parameters to XGBoost.
     * @param round Number of rounds to train.
     */
-  def train(dtrain: DataSet[LabeledVector], params: Map[String, Any], round: Int):
+  def train(dtrain: DataSet[(Float, Vector[Float])], params: Map[String, Any], round: Int):
       XGBoostModel = {
     val tracker = new RabitTracker(dtrain.getExecutionEnvironment.getParallelism)
     if (tracker.start(0L)) {
       dtrain
         .mapPartition(new MapFunction(params, round, tracker.getWorkerEnvs))
-        .reduce((x, y) => x).collect().head
+        .reduce((x, _) => x).collect().get(0)
     } else {
       throw new Error("Tracker cannot be started")
       null

@@ -16,7 +16,7 @@
 
 package ml.dmlc.xgboost4j.scala
 
-import _root_.scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters.IteratorHasAsJava
 
 import ml.dmlc.xgboost4j.java.{Column, ColumnBatch, XGBoostError, DeviceQuantileDMatrix => JDeviceQuantileDMatrix}
 

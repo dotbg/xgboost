@@ -20,7 +20,7 @@ import com.esotericsoftware.kryo.io.{Output, Input}
 import com.esotericsoftware.kryo.{Kryo, KryoSerializable}
 import ml.dmlc.xgboost4j.java.{Booster => JBooster}
 import ml.dmlc.xgboost4j.java.XGBoostError
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters.{MapHasAsScala, MapHasAsJava}
 import scala.collection.mutable
 
 /**
@@ -288,7 +288,7 @@ class Booster private[xgboost4j](private[xgboost4j] var booster: JBooster)
   @throws(classOf[XGBoostError])
   def getScore(featureMap: String, importanceType: String): Map[String, Double] = {
     Map(booster.getScore(featureMap, importanceType)
-        .asScala.mapValues(_.doubleValue).toSeq: _*)
+        .asScala.view.mapValues(_.doubleValue).toSeq: _*)
   }
 
   /**
@@ -301,7 +301,7 @@ class Booster private[xgboost4j](private[xgboost4j] var booster: JBooster)
   @throws(classOf[XGBoostError])
   def getScore(featureNames: Array[String], importanceType: String): Map[String, Double] = {
     Map(booster.getScore(featureNames, importanceType)
-        .asScala.mapValues(_.doubleValue).toSeq: _*)
+        .asScala.view.mapValues(_.doubleValue).toSeq: _*)
   }
 
   /**

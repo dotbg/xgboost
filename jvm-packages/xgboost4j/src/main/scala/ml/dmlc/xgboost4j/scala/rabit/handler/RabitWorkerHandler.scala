@@ -40,6 +40,7 @@ private[scala] class RabitWorkerHandler(host: String, worldSize: Int, tracker: A
                                         connection: ActorRef)
   extends FSM[RabitWorkerHandler.State, RabitWorkerHandler.DataStruct]
     with ActorLogging with Stash {
+  import scala.language.postfixOps
 
   import RabitWorkerHandler._
   import RabitTrackerHelpers._

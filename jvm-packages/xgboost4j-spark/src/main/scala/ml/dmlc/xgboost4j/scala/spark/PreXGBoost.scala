@@ -19,7 +19,6 @@ package ml.dmlc.xgboost4j.scala.spark
 import java.nio.file.Files
 import java.util.ServiceLoader
 
-import scala.collection.JavaConverters._
 import scala.collection.{AbstractIterator, Iterator, mutable}
 
 import ml.dmlc.xgboost4j.java.Rabit
@@ -35,7 +34,6 @@ import ml.dmlc.xgboost4j.{LabeledPoint => XGBLabeledPoint}
 import org.apache.commons.logging.LogFactory
 
 import org.apache.spark.TaskContext
-import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.ml.{Estimator, Model}
 import org.apache.spark.ml.linalg.Vector
 import org.apache.spark.sql.types.{ArrayType, FloatType, StructField, StructType}
@@ -45,6 +43,7 @@ import org.apache.spark.storage.StorageLevel
  * PreXGBoost serves preparing data before training and transform
  */
 object PreXGBoost extends PreXGBoostProvider {
+  import scala.jdk.CollectionConverters._
 
   private val logger = LogFactory.getLog("XGBoostSpark")
 
@@ -162,7 +161,7 @@ object PreXGBoost extends PreXGBoostProvider {
           dataFrame.asInstanceOf[DataFrame]).head)
     }
 
-    val hasGroup = packedParams.group.map(_ != defaultGroupColumn).getOrElse(false)
+    val hasGroup = packedParams.group.exists(_ != defaultGroupColumn)
 
     xgbExecParams: XGBoostExecutionParams =>
       composeInputData(trainingSet, hasGroup, packedParams.numWorkers) match {
@@ -264,8 +263,7 @@ object PreXGBoost extends PreXGBoostProvider {
 
         private val batchIterImpl = rowIterator.grouped(inferBatchSize).flatMap { batchRow =>
           if (batchCnt == 0) {
-            val rabitEnv = Array(
-              "DMLC_TASK_ID" -> TaskContext.getPartitionId().toString).toMap
+            val rabitEnv = Map("DMLC_TASK_ID" -> TaskContext.getPartitionId().toString)
             Rabit.init(rabitEnv.asJava)
           }
 
